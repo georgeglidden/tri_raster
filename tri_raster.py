@@ -1,5 +1,6 @@
 import numpy as np
 from skimage.draw import line
+
 def dist(x1,x2):
     return np.sqrt(np.sum(np.square(np.array(x1)-np.array(x2)), axis=0))
 
@@ -108,24 +109,27 @@ def fill_tri(a,b,c,verbose=False):
             constraint=lambda x: under_g(x) and under_h(x), verbose=verbose)
     return points
 
-import sys
-if len(sys.argv) > 4:   raise ValueError('too many arguments')
-Vstr = sys.argv[1:]
-V = [(int(vs.split(',')[0]), int(vs.split(',')[1])) for vs in Vstr]
-a,b,c = V
-X = [v[0] for v in V]
-Y = [v[1] for v in V]
-width = max(X) - min(X) + 2
-height = max(Y) - min(Y) + 2
-points = fill_tri(a,b,c, verbose=True)
-print(len(points))
-im = np.zeros((width,height))
-offx = min(X)
-offy = min(Y)
-points = [(p[0]-offx,p[1]-offy) for p in points]
-print(points)
-for x,y in points:
-    im[x,y] = 1
-from matplotlib import pyplot as plt
-plt.imshow(im)
-plt.show()
+def main():
+	import sys
+	if len(sys.argv) > 4:   raise ValueError('too many arguments')
+	Vstr = sys.argv[1:]
+	V = [(int(vs.split(',')[0]), int(vs.split(',')[1])) for vs in Vstr]
+	a,b,c = V
+	X = [v[0] for v in V]
+	Y = [v[1] for v in V]
+	width = max(X) - min(X) + 2
+	height = max(Y) - min(Y) + 2
+	points = fill_tri(a,b,c, verbose=True)
+	print(len(points))
+	im = np.zeros((width,height))
+	offx = min(X)
+	offy = min(Y)
+	points = [(p[0]-offx,p[1]-offy) for p in points]
+	print(points)
+	for x,y in points:
+		im[x,y] = 1
+	from matplotlib import pyplot as plt
+	plt.imshow(im)
+	plt.show()
+
+if __name__ == '__main__':	main()
