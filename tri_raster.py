@@ -10,7 +10,6 @@ def dist(x1,x2):
 def angle(x1,x2):
     return np.arctan2(x2[1]-x1[1],x2[0]-x1[0])
 
-# todo: when slope is infinite, generate a lambda suitable for constraint checking
 def get_eq(x, axis,verbose=False):
     if axis == 0:
         (x1,y1),(x2,y2) = x
@@ -19,7 +18,7 @@ def get_eq(x, axis,verbose=False):
     dy = y2-y1
     dx = x2-x1
     if dx == 0: 
-        return lambda x: np.inf
+        return lambda x: np.inf # not rigorous; see how constraint() handles this case
     slope = dy/dx
     shift = (y1+y2)/2 - slope * (x1+x2)/2
     if verbose:
@@ -42,7 +41,10 @@ def constraint(f, parity, orientation):
         elif parity == -1:
             return lambda x: x[orientation-1] > f(x[orientation])
 
-# todo: why are we losing the 2nd axial index?
+# a,b : give the line over which the algorithm iterates
+# axis and parity : specify the direction in which strips are generated, 
+#       e.g., axis=0 parity=1 will increment the x-value of a point in ab until the constraint is no longer satisfied
+# constraint : returns true if x is within the triangle and false otherwise
 def tri_bresenham(a, b, axis, parity, constraint, verbose=False):
     ab = X,Y = line(a[0],a[1],b[0],b[1])
     n = len(X)
@@ -70,6 +72,7 @@ def tri_bresenham(a, b, axis, parity, constraint, verbose=False):
     if verbose: print(points)
     return points
 
+# a,b,c : vertices of the triangle in (x,y) form
 def fill_tri(a,b,c,verbose=False):
     # organize the triangle by longest side and not-longest sides
     sides = [(a,b),(b,c),(c,a)]
@@ -98,20 +101,19 @@ def fill_tri(a,b,c,verbose=False):
         print('third:\t\t',t)
         print('orientation:\t',orientation)
         print('parity:\t\t',parity)
-
-    # modified bresenham's follows AB and collects the rest of the points
     #   find lines g(y),h(y) describing BC,AC
     g = get_eq(c1,orientation,verbose=verbose)
     h = get_eq(c2,orientation,verbose=verbose)
     #   construct constraints per parity
     under_g = constraint(g, parity, orientation)
     under_h = constraint(h, parity, orientation)
+    # get points as constrained by ax and g,h
     points = tri_bresenham(ax[0],ax[1],orientation,parity,
             constraint=lambda x: under_g(x) and under_h(x), verbose=verbose)
     return points
 
 import sys
-if len(Vstr) > 4:   raise ValueError('too many arguments')
+if len(sys.argv) > 4:   raise ValueError('too many arguments')
 Vstr = sys.argv[1:]
 V = [(int(vs.split(',')[0]), int(vs.split(',')[1])) for vs in Vstr]
 a,b,c = V
