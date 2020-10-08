@@ -1,9 +1,5 @@
 import numpy as np
 from skimage.draw import line
-from shapely.geometry import Point
-from shapely.geometry.polygon import Polygon
-from itertools import product
-
 def dist(x1,x2):
     return np.sqrt(np.sum(np.square(np.array(x1)-np.array(x2)), axis=0))
 
