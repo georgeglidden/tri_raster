@@ -19,7 +19,21 @@ def angle(x1,x2):
     :return: an angle in [-pi and pi] between two vectors
     """
     # \tan^{-1}((y_f - y_i) / (x_f - x_i))
-    return np.arctan2(x2[1]-x1[1],x2[0]-x1[0])
+    return (np.arctan2(x2[1],x2[0]) - np.arctan2(x1[1],x1[0]))
+
+def tri_area(tri):
+    """
+    finds the area of a triangle
+    :param tri: a 3-tuple of integer 2-tuples, describing a triangle.
+    :return: a positive real number, the area of `tri`
+    """
+    tri = np.array(tri)
+    a = dist(tri[1],tri[0])
+    b = dist(tri[2],tri[0])
+    a_vec = tri[1]-tri[0]
+    b_vec = tri[2]-tri[0]
+    theta = angle(a_vec, b_vec)
+    return abs(0.5 * a * b * np.sin(theta))
 
 def get_eq(segment, axis, verbose=False):
     """
@@ -75,7 +89,7 @@ def constraint(f, orientation, parity):
             return lambda x: x[orientation-1] <= f(x[orientation])
         elif parity == -1:
             # assigns label "True" to the half-plane /above/ f
-            return lambda x: x[orientation-1] > f(x[orientation])
+            return lambda x: x[orientation-1] >= f(x[orientation])
         else:
             raise ValueError("parity must be +- 1")
 
@@ -123,7 +137,7 @@ def fill_tri(tri,verbose=False):
     """
     wrapper for the tri_bresenham routine; generates all points within a
     triangle. requires time and space linear to the area of the triangle.
-    :param tri: a triangle, described by its three vertices points.
+    :param tri: a 3-tuple of integer 2-tuples, describing a triangle.
     :param verbose: print debugging info
     :return: a list containing all points that fall within the triangle
     """
@@ -161,12 +175,85 @@ def fill_tri(tri,verbose=False):
     # build constraints with regard to the oriented side
     under_g = constraint(g, orientation, parity)
     under_h = constraint(h, orientation, parity)
-    print(under_g,under_h)
     # the points above f and below g,h - which makes up the whole triangle!
     points = tri_bresenham(ax, orientation, parity,
                            constraint=lambda x: under_g(x) and under_h(x),
                            verbose=verbose)
     return points
+
+def lazy_patch(tri,verbose=False):
+    """
+    a personally lazy, computationally expensive patch to `fill_tri`. instead of
+    using math or logic to determine the proper alignment, orientation, and
+    parity, just iterate all twelve combinations thereof: {1,2,3}x{0,1}x{-1,1}.
+    :param tri: a triangle, described by its three vertices points.
+    :param verbose: print debugging info
+    :return: a list containing all points that fall within the triangle
+    """
+    a,b,c = tri
+    # locate the longest side `ax` of the triangle
+    sides = [(a,b),(b,c),(c,a)]
+    P = []
+    for ax_idx in [0,1,2]:
+        ax = sides[ax_idx]
+        ax_ang = angle(ax[0],ax[1])
+        # find the vertex opposing `ax`
+        c1,c2 = sides[ax_idx-1],sides[ax_idx-2]
+        assert c1[0] == c2[1]
+        t = c1[0]
+        # orient the triangle to an axis (per the closest to `ax`)
+        if np.pi/4 <= ax_ang < 3*np.pi/4 or -3*np.pi/4 <= ax_ang < -np.pi/4:
+            orientation = 1
+        else:
+            orientation = 0
+        for orientation in [0,1]:
+            # find the line containing `ax`
+            f = get_eq(ax,orientation,verbose=verbose)
+            # determine the parity of the triangle
+            for parity in [-1,1]:
+                if verbose:
+                    print('axial:\t\t',ax)
+                    print('angle:\t\t',ax_ang)
+                    print('third:\t\t',t)
+                    print('orientation:\t',orientation)
+                    print('parity:\t\t',parity)
+                # lines containing the other two sides of the triangle
+                g = get_eq(c1,orientation,verbose=verbose)
+                h = get_eq(c2,orientation,verbose=verbose)
+                # build constraints with regard to the oriented side
+                under_g = constraint(g, orientation, parity)
+                under_h = constraint(h, orientation, parity)
+                # the points above f and below g,h - which makes up the whole triangle!
+                points = tri_bresenham(ax, orientation, parity,
+                                       constraint=lambda x: under_g(x) and under_h(x),
+                                       verbose=verbose)
+                if len(points) > 0:
+                    P.append(points)
+    return P
+
+def fill_tri_2(tri,verbose=False):
+    """
+    first lazy patch - use whatever conditions generated the most points
+    :param tri: a triangle, described by its three vertices points.
+    :param verbose: print debugging info
+    :return: a list containing all points that fall within the triangle
+    """
+    P = lazy_patch(tri, verbose)
+    p_idx = np.argmax([len(points) for points in P])
+    return P[p_idx]
+
+def fill_tri_3(tri,verbose=False):
+    """
+    second lazy patch - use whatever conditions generated the number of points
+    closest to the actual area of the triangle.
+    :param tri: a triangle, described by its three vertices points.
+    :param verbose: print debugging info
+    :return: a list containing all points that fall within the triangle
+    """
+    P = lazy_patch(tri, verbose)
+    area = tri_area(tri)
+    p_idx = np.argmin([abs(len(points)-area) for points in P])
+    return P[p_idx]
 
 def main():
     import sys
@@ -185,7 +272,7 @@ def main():
     Y = [v[1] for v in V]
     width = max(X) - min(X) + 2
     height = max(Y) - min(Y) + 2
-    points = fill_tri([a,b,c], verbose=True)
+    points = fill_tri_3([a,b,c], verbose=True)
     print(len(points))
     im = np.zeros((width,height))
     offx = min(X)
