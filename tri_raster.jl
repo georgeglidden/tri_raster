@@ -37,10 +37,10 @@ d(x1, x2) = sqrt(sum((x1 .- x2).^2))
 flatten(P) = [(P...)...] # equivalently, `collect(Iterators.flatten(P))`
 
 "Variance of `IMG` restricted to the sublattice spanned by `TRI`."
-variance(IMG, TRI::Triangle) = var([IMG[i, j] for (i,j) in lattice(TRI)])
+variance(IMG, TRI::Triangle) = var([IMG[i, j] for (i,j) in rasterize(TRI)])
 
 "Average of `IMG` restricted to the sublattice spanned by `TRI`."
-average(IMG, TRI::Triangle) = mean([IMG[i, j] for (i,j) in lattice(TRI)])
+average(IMG, TRI::Triangle) = mean([IMG[i, j] for (i,j) in rasterize(TRI)])
 
 "Iterate the sublattice of ℤ² intersected by `TRI`."
 function rasterize(TRI)
